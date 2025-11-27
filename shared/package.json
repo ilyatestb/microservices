@@ -1,0 +1,16 @@
+{
+  "name": "@my-apps/shared",
+  "version": "0.0.1",
+  "description": "Shared utilities and DTOs for microservices",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
+  }
+}
+
