@@ -9,7 +9,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService)
   const logger = new Logger('GatewayBootstrap')
 
-  const port = configService.get<number>('API_GATEWAY_PORT', 5005)
+  const port = configService.get<number>('API_GATEWAY_PORT', 4050)
   const protocol = configService.get<string>('API_GATEWAY_PROTOCOL', 'http')
   const nodeEnv = configService.get<string>('NODE_ENV')
 
