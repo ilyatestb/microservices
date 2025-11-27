@@ -1,0 +1,22 @@
+FROM node:24-alpine AS builder
+WORKDIR /app
+RUN npm install -g pnpm
+
+COPY apps/journal/package.json ./
+COPY ../../package.json ../../pnpm-lock.yaml ./
+
+RUN pnpm install --frozen-lockfile --filter journal...
+
+COPY apps/journal ./apps/journal
+
+RUN pnpm --filter apps/journal build
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+COPY --from=builder /app/apps/journal/node_modules ./node_modules
+COPY --from=builder /app/apps/journal/dist ./dist
+
+EXPOSE 3001
+
+CMD ["node", "dist/main.js"]
