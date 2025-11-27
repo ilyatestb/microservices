@@ -21,6 +21,7 @@ services:
     depends_on:
       - redis
       - journal
+      - data-pipeline
     env_file:
       - .env
     ports:
@@ -38,6 +39,19 @@ services:
       - .env
     ports:
       - '4051:4051'
+    restart: unless-stopped
+
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: apps/data-pipeline/dockerfile
+    container_name: data-pipeline
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    ports:
+      - '4052:4052'
     restart: unless-stopped
 
 volumes:

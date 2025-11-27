@@ -1,0 +1,30 @@
+FROM node:24-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/data-pipeline/package.json apps/data-pipeline/package.json
+COPY shared/package.json shared/package.json
+
+RUN pnpm install --frozen-lockfile --filter data-pipeline... --filter @my-apps/shared...
+
+COPY apps/data-pipeline ./apps/data-pipeline
+COPY shared ./shared
+RUN pnpm --filter @my-apps/shared... build
+RUN pnpm --filter data-pipeline... build
+
+FROM node:24-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/data-pipeline/node_modules ./apps/data-pipeline/node_modules
+COPY --from=builder /app/apps/data-pipeline/dist ./apps/data-pipeline/dist
+COPY --from=builder /app/apps/data-pipeline/package.json ./apps/data-pipeline/package.json
+COPY --from=builder /app/shared ./shared
+
+WORKDIR /app/apps/data-pipeline
+EXPOSE 4052
+
+CMD ["node", "dist/main.js"]
+
