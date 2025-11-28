@@ -17,6 +17,11 @@
   },
   "scripts": {
     "lint": "eslint apps/**/*.ts --ext .ts --fix",
-    "format": "prettier --write \"apps/**/*.ts\""
+    "format": "prettier --write \"apps/**/*.ts\"",
+    "build:shared": "pnpm --filter @my-apps/shared build",
+    "build": "pnpm build:shared && pnpm --filter gateway build && pnpm --filter data-pipeline build && pnpm --filter journal build",
+    "dev:gateway": "pnpm build:shared && pnpm --filter gateway start:dev",
+    "dev:data-pipeline": "pnpm build:shared && pnpm --filter data-pipeline start:dev",
+    "dev:journal": "pnpm build:shared && pnpm --filter journal start:dev"
   }
 }

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common'
-import { AppService } from './app.service'
 import { ConfigModule } from '@nestjs/config'
+import { GatewayModule } from './modules/gateway.module'
 
 @Module({
   imports: [
@@ -8,7 +8,7 @@ import { ConfigModule } from '@nestjs/config'
       isGlobal: true,
       envFilePath: ['../../.env'],
     }),
+    GatewayModule,
   ],
-  providers: [AppService],
 })
 export class AppModule {}

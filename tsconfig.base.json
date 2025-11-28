@@ -17,6 +17,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@my-apps/shared": ["shared/src"],
+      "@my-apps/shared/*": ["shared/src/*"]
+    }
   }
 }

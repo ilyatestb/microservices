@@ -1,9 +1,9 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:latest
     container_name: redis
     ports:
-      - '127.0.0.1:${REDIS_PORT}:${REDIS_PORT}'
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-secret}
     command: >
@@ -13,15 +13,38 @@ services:
       - redis-data:/data
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    ports:
+      - '127.0.0.1:${MONGODB_PORT:-27017}:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-secret}
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')" --quiet
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   gateway:
     build:
       context: .
       dockerfile: apps/gateway/dockerfile
     container_name: gateway
     depends_on:
-      - redis
-      - journal
-      - data-pipeline
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+      journal:
+        condition: service_started
+      data-pipeline:
+        condition: service_started
     env_file:
       - .env
     ports:
@@ -34,7 +57,10 @@ services:
       dockerfile: apps/journal/dockerfile
     container_name: journal
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -47,7 +73,10 @@ services:
       dockerfile: apps/data-pipeline/dockerfile
     container_name: data-pipeline
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -56,3 +85,4 @@ services:
 
 volumes:
   redis-data:
+  mongodb-data:
