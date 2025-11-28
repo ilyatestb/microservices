@@ -1,8 +1,22 @@
 import { Controller, Post, Get, Body, Query, HttpException, HttpStatus, Logger } from '@nestjs/common'
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger'
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices'
-import { ConfigService } from '@nestjs/config'
-import { PaginationQueryDto } from '@my-apps/shared'
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBadRequestResponse,
+  ApiInternalServerErrorResponse,
+} from '@nestjs/swagger'
+import { ClientProxy } from '@nestjs/microservices'
+import { MessageType } from '@my-apps/shared'
+import {
+  FetchDataSwaggerDto,
+  UploadFileSwaggerDto,
+  SearchQuerySwaggerDto,
+  FetchDataResponseDto,
+  UploadFileResponseDto,
+  SearchDataResponseDto,
+} from '../dto'
+import { RedisClientService } from '../modules/redis-client.service'
 
 @ApiTags('Data')
 @Controller('data')
@@ -10,86 +24,78 @@ export class DataController {
   private readonly logger = new Logger(DataController.name)
   private readonly dataClient: ClientProxy
 
-  constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('REDIS_HOST', 'localhost')
-    const port = this.configService.get<number>('REDIS_PORT', 6379)
-    const password = this.configService.get<string | undefined>('REDIS_PASSWORD')
-
-    this.dataClient = ClientProxyFactory.create({
-      transport: Transport.REDIS,
-      options: {
-        host,
-        port,
-        password,
-      },
-    })
+  constructor(private readonly redisClientService: RedisClientService) {
+    this.dataClient = this.redisClientService.getClient('data')
   }
 
   @Post('fetch')
-  @ApiOperation({ summary: 'Fetch data from public API and save to JSON file' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        apiUrl: {
-          type: 'string',
-          example: 'https://jsonplaceholder.typicode.com/posts',
-        },
-      },
-      required: ['apiUrl'],
-    },
+  @ApiOperation({
+    summary: 'Fetch data from public API and save to JSON file',
+    description: 'Fetches data from the provided API URL and saves it to a JSON file in the data directory',
   })
-  @ApiResponse({ status: 200, description: 'Data fetched and saved successfully' })
-  async fetchData(@Body() body: { apiUrl: string }) {
+  @ApiResponse({
+    status: 200,
+    description: 'Data fetched and saved successfully',
+    type: FetchDataResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid API URL provided' })
+  @ApiInternalServerErrorResponse({ description: 'Failed to fetch data from API' })
+  async fetchData(@Body() body: FetchDataSwaggerDto): Promise<FetchDataResponseDto> {
     try {
-      return await this.dataClient.send('data.fetch', body).toPromise()
+      return await this.dataClient.send<FetchDataResponseDto>(MessageType.DATA_FETCH, body).toPromise()
     } catch (error) {
-      this.logger.error(`Failed to fetch data: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to fetch data: ${errorMessage}`)
       throw new HttpException('Failed to fetch data', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
   @Post('upload')
-  @ApiOperation({ summary: 'Upload and parse JSON file, insert into MongoDB' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        filePath: {
-          type: 'string',
-          example: './data/data_1234567890.json',
-        },
-      },
-      required: ['filePath'],
-    },
+  @ApiOperation({
+    summary: 'Upload and parse JSON file, insert into MongoDB',
+    description: 'Reads a JSON file from the specified path, parses it, and inserts the data into MongoDB collection',
   })
-  @ApiResponse({ status: 200, description: 'File uploaded and parsed successfully' })
-  async uploadFile(@Body() body: { filePath: string }) {
+  @ApiResponse({
+    status: 200,
+    description: 'File uploaded and parsed successfully',
+    type: UploadFileResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid file path or file not found' })
+  @ApiInternalServerErrorResponse({ description: 'Failed to upload or parse file' })
+  async uploadFile(@Body() body: UploadFileSwaggerDto): Promise<UploadFileResponseDto> {
     try {
-      return await this.dataClient.send('data.upload', body).toPromise()
+      return await this.dataClient.send<UploadFileResponseDto>(MessageType.DATA_UPLOAD, body).toPromise()
     } catch (error) {
-      this.logger.error(`Failed to upload file: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to upload file: ${errorMessage}`)
       throw new HttpException('Failed to upload file', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
   @Get('search')
-  @ApiOperation({ summary: 'Search data with pagination' })
-  @ApiQuery({ name: 'query', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 25 })
-  @ApiResponse({ status: 200, description: 'Search results' })
-  async searchData(@Query('query') query: string = '', @Query() pagination: PaginationQueryDto) {
+  @ApiOperation({
+    summary: 'Search data with pagination',
+    description: 'Searches data in MongoDB collection with optional query string and pagination support',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results with pagination metadata',
+    type: SearchDataResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid query parameters' })
+  @ApiInternalServerErrorResponse({ description: 'Failed to search data' })
+  async searchData(@Query() searchQuery: SearchQuerySwaggerDto): Promise<SearchDataResponseDto> {
     try {
       return await this.dataClient
-        .send('data.search', {
-          query,
-          page: pagination.page || 1,
-          limit: pagination.limit || 25,
+        .send<SearchDataResponseDto>(MessageType.DATA_SEARCH, {
+          query: searchQuery.query || '',
+          page: searchQuery.page,
+          limit: searchQuery.limit,
         })
         .toPromise()
     } catch (error) {
-      this.logger.error(`Failed to search data: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to search data: ${errorMessage}`)
       throw new HttpException('Failed to search data', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }

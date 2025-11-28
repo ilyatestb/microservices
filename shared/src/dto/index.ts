@@ -1,3 +1,7 @@
 export * from './base-id.dto'
 export * from './pagination-query.dto'
 export * from './date-range.dto'
+export * from './search-query.dto'
+export * from './fetch-data.dto'
+export * from './upload-file.dto'
+export * from './get-logs.dto'

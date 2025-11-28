@@ -1,6 +1,7 @@
 import { Controller, Logger } from '@nestjs/common'
 import { MessagePattern, Payload } from '@nestjs/microservices'
 import { DataService } from './data.service'
+import { FetchDataDto, UploadFileDto, SearchQueryDto, MessageType } from '@my-apps/shared'
 
 @Controller()
 export class DataController {
@@ -8,21 +9,21 @@ export class DataController {
 
   constructor(private readonly dataService: DataService) {}
 
-  @MessagePattern('data.fetch')
-  async fetchData(@Payload() payload: { apiUrl: string }) {
-    this.logger.log(`Received fetch request for: ${payload.apiUrl}`)
+  @MessagePattern(MessageType.DATA_FETCH)
+  async fetchData(@Payload() payload: FetchDataDto) {
+    this.logger.log(`Received fetch request for: ${JSON.stringify(payload, null, 2)}`)
     return await this.dataService.fetchAndSaveData(payload.apiUrl)
   }
 
-  @MessagePattern('data.upload')
-  async uploadFile(@Payload() payload: { filePath: string }) {
-    this.logger.log(`Received upload request for: ${payload.filePath}`)
+  @MessagePattern(MessageType.DATA_UPLOAD)
+  async uploadFile(@Payload() payload: UploadFileDto) {
+    this.logger.log(`Received upload request for: ${JSON.stringify(payload, null, 2)}`)
     return await this.dataService.uploadAndParseFile(payload.filePath)
   }
 
-  @MessagePattern('data.search')
-  async searchData(@Payload() payload: { query: string; page: number; limit: number }) {
-    this.logger.log(`Received search request: ${payload.query}`)
-    return await this.dataService.searchData(payload.query, payload.page, payload.limit)
+  @MessagePattern(MessageType.DATA_SEARCH)
+  async searchData(@Payload() payload: SearchQueryDto) {
+    this.logger.log(`Received search request: ${JSON.stringify(payload, null, 2)}`)
+    return await this.dataService.searchData(payload.query || '', payload.page, payload.limit)
   }
 }
