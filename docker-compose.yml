@@ -47,6 +47,8 @@ services:
         condition: service_started
     env_file:
       - .env
+    environment:
+      - REDIS_HOST=redis
     ports:
       - '${API_GATEWAY_PORT:-4050}:4050'
     restart: unless-stopped
