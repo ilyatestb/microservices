@@ -48,7 +48,7 @@ services:
     env_file:
       - .env
     ports:
-      - '4050:4050'
+      - '${API_GATEWAY_PORT:-4050}:4050'
     restart: unless-stopped
 
   journal:

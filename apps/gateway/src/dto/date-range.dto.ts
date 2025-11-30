@@ -7,7 +7,7 @@ import { DateRangeDto } from '@my-apps/shared'
 export class DateRangeSwaggerDto extends DateRangeDto {
   @ApiPropertyOptional({
     description: 'Start date in ISO format',
-    example: '2024-01-01T00:00:00.000Z',
+    example: '2025-01-01T00:00:00.000Z',
     type: String,
     format: 'date-time',
   })
@@ -15,7 +15,7 @@ export class DateRangeSwaggerDto extends DateRangeDto {
 
   @ApiPropertyOptional({
     description: 'End date in ISO format',
-    example: '2024-12-31T23:59:59.999Z',
+    example: '2025-12-31T23:59:59.999Z',
     type: String,
     format: 'date-time',
   })
