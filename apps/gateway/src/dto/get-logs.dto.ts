@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
-import { GetLogsDto } from '@my-apps/shared'
+import { GetLogsDto, EventType } from '@my-apps/shared'
 
 /**
  * Extended DTO for getting logs with Swagger documentation.
@@ -7,7 +7,9 @@ import { GetLogsDto } from '@my-apps/shared'
 export class GetLogsSwaggerDto extends GetLogsDto {
   @ApiPropertyOptional({
     description: 'Filter logs by event type',
-    example: 'data.fetch.completed',
+    example: EventType.DATA_FETCH_COMPLETED,
+    enum: EventType,
+    enumName: 'EventType',
     type: String,
   })
   declare type?: string

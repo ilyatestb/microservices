@@ -13,7 +13,7 @@ async function bootstrap() {
   const protocol = configService.get<string>('API_GATEWAY_PROTOCOL', 'http')
   const nodeEnv = configService.get<string>('NODE_ENV')
 
-  const config = new DocumentBuilder().setTitle('Microservices Test Task').build()
+  const config = new DocumentBuilder().setTitle('Microservices interactions API').build()
   const documentFactory = () => SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('swagger', app, documentFactory)
 
