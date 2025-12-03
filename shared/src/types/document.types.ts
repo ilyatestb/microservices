@@ -12,5 +12,4 @@ export interface LogEntry {
   payload: Record<string, unknown>
   timestamp: Date
   service: string
-  createdAt: Date
 }

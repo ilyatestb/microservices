@@ -4,11 +4,13 @@ import { UploadFileDto } from '@my-apps/shared'
 /**
  * Extended DTO for uploading file with Swagger documentation.
  */
+
 export class UploadFileSwaggerDto extends UploadFileDto {
   @ApiProperty({
-    description: 'Path to the JSON file to upload and parse',
-    example: './data/data_1234567890.json',
+    description: 'JSON file to upload and parse',
     type: String,
+    format: 'binary',
+    example: 'file.json',
   })
-  declare filePath: string
+  declare file: Express.Multer.File
 }

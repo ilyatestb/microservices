@@ -34,7 +34,7 @@ export interface DataFetchEventPayload extends BaseEventPayload {
  * Payload for data.upload events.
  */
 export interface DataUploadEventPayload extends BaseEventPayload {
-  filePath: string
+  filename: string
   insertedCount?: number
   error?: string
 }

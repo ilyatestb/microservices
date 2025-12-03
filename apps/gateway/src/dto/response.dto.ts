@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { FetchDataResponse, UploadFileResponse, SearchDataResponse, GetLogsResponse } from '@my-apps/shared'
+import {
+  FetchDataResponse,
+  UploadFileResponse,
+  SearchDataResponse,
+  GetLogsResponse,
+  PaginationMeta,
+} from '@my-apps/shared'
 
 /**
  * Response DTO for fetch data operation.
@@ -35,6 +41,23 @@ export class UploadFileResponseDto implements UploadFileResponse {
 /**
  * Response DTO for search data operation.
  */
+export class PaginationMetaDto implements PaginationMeta {
+  @ApiProperty({ description: 'Total number of items', example: 100, type: Number })
+  total!: number
+
+  @ApiProperty({ description: 'Current page number', example: 1, type: Number })
+  page!: number
+
+  @ApiProperty({ description: 'Items per page', example: 25, type: Number })
+  limit!: number
+
+  @ApiProperty({ description: 'Total pages', example: 4, type: Number })
+  totalPages!: number
+}
+
+/**
+ * Response DTO for search data operation.
+ */
 export class SearchDataResponseDto implements SearchDataResponse {
   @ApiProperty({
     description: 'Array of matching documents',
@@ -44,25 +67,10 @@ export class SearchDataResponseDto implements SearchDataResponse {
   data!: Record<string, unknown>[]
 
   @ApiProperty({
-    description: 'Total number of matching documents',
-    example: 100,
-    type: Number,
+    description: 'Pagination metadata',
+    type: PaginationMetaDto,
   })
-  total!: number
-
-  @ApiProperty({
-    description: 'Current page number',
-    example: 1,
-    type: Number,
-  })
-  page!: number
-
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 25,
-    type: Number,
-  })
-  limit!: number
+  meta!: PaginationMetaDto
 }
 
 /**
@@ -97,26 +105,11 @@ export class GetLogsResponseDto implements GetLogsResponse {
     type: [LogEntryDto],
     isArray: true,
   })
-  logs!: LogEntryDto[]
+  data!: LogEntryDto[]
 
   @ApiProperty({
-    description: 'Total number of matching logs',
-    example: 100,
-    type: Number,
+    description: 'Pagination metadata',
+    type: PaginationMetaDto,
   })
-  total!: number
-
-  @ApiProperty({
-    description: 'Current page number',
-    example: 1,
-    type: Number,
-  })
-  page!: number
-
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 25,
-    type: Number,
-  })
-  limit!: number
+  meta!: PaginationMetaDto
 }

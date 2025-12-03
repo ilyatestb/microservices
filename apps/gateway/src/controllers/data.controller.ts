@@ -1,22 +1,39 @@
-import { Controller, Post, Get, Body, Query, HttpException, HttpStatus, Logger } from '@nestjs/common'
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  HttpException,
+  HttpStatus,
+  Logger,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common'
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger'
 import { ClientProxy } from '@nestjs/microservices'
 import { MessageType } from '@my-apps/shared'
 import {
   FetchDataSwaggerDto,
-  UploadFileSwaggerDto,
   SearchQuerySwaggerDto,
   FetchDataResponseDto,
   UploadFileResponseDto,
   SearchDataResponseDto,
+  UploadFileSwaggerDto,
 } from '../dto'
 import { RedisClientService } from '../modules/redis-client.service'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { Express } from 'express'
+import { firstValueFrom } from 'rxjs'
 
 @ApiTags('Data')
 @Controller('data')
@@ -42,7 +59,7 @@ export class DataController {
   @ApiInternalServerErrorResponse({ description: 'Failed to fetch data from API' })
   async fetchData(@Body() body: FetchDataSwaggerDto): Promise<FetchDataResponseDto> {
     try {
-      return await this.dataClient.send<FetchDataResponseDto>(MessageType.DATA_FETCH, body).toPromise()
+      return firstValueFrom(this.dataClient.send<FetchDataResponseDto>(MessageType.DATA_FETCH, body))
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to fetch data: ${errorMessage}`)
@@ -53,18 +70,41 @@ export class DataController {
   @Post('upload')
   @ApiOperation({
     summary: 'Upload and parse JSON file, insert into MongoDB',
-    description: 'Reads a JSON file from the specified path, parses it, and inserts the data into MongoDB collection',
+    description: 'Reads a JSON file from the request, parses it, and inserts the data into MongoDB collection',
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: 'File uploaded and parsed successfully',
     type: UploadFileResponseDto,
   })
-  @ApiBadRequestResponse({ description: 'Invalid file path or file not found' })
+  @ApiBadRequestResponse({ description: 'Invalid file type or file size' })
   @ApiInternalServerErrorResponse({ description: 'Failed to upload or parse file' })
-  async uploadFile(@Body() body: UploadFileSwaggerDto): Promise<UploadFileResponseDto> {
+  @ApiBody({ type: UploadFileSwaggerDto })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 1024 * 1024 * 10,
+      },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype !== 'application/json') {
+          return cb(new BadRequestException('Only JSON files are allowed'), false)
+        }
+        cb(null, true)
+      },
+    }),
+  )
+  async uploadFile(@UploadedFile() file: Express.Multer.File): Promise<UploadFileResponseDto> {
+    if (!file) {
+      throw new BadRequestException('File is required')
+    }
     try {
-      return await this.dataClient.send<UploadFileResponseDto>(MessageType.DATA_UPLOAD, body).toPromise()
+      const content = file.buffer.toString('base64')
+      const filename = file.originalname
+
+      this.logger.log(`Sending file content to data service: ${filename} (${file.size} bytes)`)
+
+      return firstValueFrom(this.dataClient.send<UploadFileResponseDto>(MessageType.DATA_UPLOAD, { filename, content }))
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to upload file: ${errorMessage}`)
@@ -86,16 +126,20 @@ export class DataController {
   @ApiInternalServerErrorResponse({ description: 'Failed to search data' })
   async searchData(@Query() searchQuery: SearchQuerySwaggerDto): Promise<SearchDataResponseDto> {
     try {
-      return await this.dataClient
-        .send<SearchDataResponseDto>(MessageType.DATA_SEARCH, {
+      return firstValueFrom(
+        this.dataClient.send<SearchDataResponseDto>(MessageType.DATA_SEARCH, {
           query: searchQuery.query || '',
           page: searchQuery.page,
           limit: searchQuery.limit,
-        })
-        .toPromise()
+        }),
+      )
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to search data: ${errorMessage}`)
+      if (errorMessage.includes('Wildcard')) {
+        throw new BadRequestException(errorMessage)
+      }
+
       throw new HttpException('Failed to search data', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }

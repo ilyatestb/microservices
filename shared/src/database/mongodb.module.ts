@@ -34,24 +34,6 @@ export class MongodbModule {
               connectTimeoutMS: 10000,
             })
 
-            let retries = 5
-            while (retries > 0) {
-              try {
-                await client.connect()
-                await client.db('admin').command({ ping: 1 })
-                this.logger.log('Successfully connected to MongoDB')
-                return client
-              } catch (error) {
-                retries--
-                if (retries === 0) {
-                  this.logger.error(`Failed to connect to MongoDB after retries: ${error.message}`)
-                  throw error
-                }
-                this.logger.warn(`MongoDB connection failed, retrying... (${retries} attempts left)`)
-                await new Promise((resolve) => setTimeout(resolve, 2000))
-              }
-            }
-
             return client
           },
         },

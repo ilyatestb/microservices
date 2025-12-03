@@ -5,13 +5,14 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/gateway/package.json apps/gateway/package.json
 COPY shared/package.json shared/package.json
+COPY shared/tsconfig.json shared/tsconfig.json
 
-RUN pnpm install --frozen-lockfile --filter gateway... --filter @my-apps/shared...
+RUN pnpm install --frozen-lockfile
 
 COPY apps/gateway ./apps/gateway
-COPY shared ./shared
-RUN pnpm --filter @my-apps/shared... build
-RUN pnpm --filter gateway... build
+COPY shared/src ./shared/src
+RUN pnpm --filter @my-apps/shared build
+RUN pnpm --filter gateway build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

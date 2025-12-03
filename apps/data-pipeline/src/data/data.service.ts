@@ -1,12 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Db, Collection, IndexDescription, OptionalId } from 'mongodb'
 import Redis from 'ioredis'
 import axios from 'axios'
-import { writeFile, mkdir, readFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { MONGODB_DB } from '@my-apps/shared'
+import { formatPaginatedResponse, MONGODB_DB, preparePagination } from '@my-apps/shared'
 import { REDIS_CLIENT } from '@my-apps/shared'
 import {
   FetchDataResponse,
@@ -19,10 +19,11 @@ import {
   DataUploadEventPayload,
   DataSearchEventPayload,
   PubSubChannel,
+  buildDynamicSearchQuery,
 } from '@my-apps/shared'
 
 @Injectable()
-export class DataService {
+export class DataService implements OnModuleInit {
   private readonly logger = new Logger(DataService.name)
   private readonly dataDir: string
 
@@ -32,6 +33,17 @@ export class DataService {
     private readonly configService: ConfigService,
   ) {
     this.dataDir = this.configService.get<string>('DATA_DIR', './data')
+  }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const collection = this.db.collection<DataDocument>('data')
+      await this.ensureIndexes(collection)
+      this.logger.log('Database indexes initialized successfully')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      this.logger.error(`Failed to initialize indexes: ${errorMessage}`)
+    }
   }
 
   async fetchAndSaveData(apiUrl: string): Promise<FetchDataResponse> {
@@ -64,13 +76,13 @@ export class DataService {
     }
   }
 
-  async uploadAndParseFile(filePath: string): Promise<UploadFileResponse> {
-    this.logger.log(`Uploading and parsing file: ${filePath}`)
-    await this.publishEvent(EventType.DATA_UPLOAD_STARTED, { filePath })
+  async uploadAndParseFile(filename: string, content: string): Promise<UploadFileResponse> {
+    this.logger.log(`Uploading and parsing file: ${filename}`)
+    await this.publishEvent(EventType.DATA_UPLOAD_STARTED, { filename })
 
     try {
-      await this.ensureConnection()
-      const fileContent = await readFile(filePath, 'utf-8')
+      const fileBuffer = Buffer.from(content, 'base64')
+      const fileContent = fileBuffer.toString('utf-8')
       const data = JSON.parse(fileContent) as DataDocument | DataDocument[]
 
       const collection = this.db.collection<DataDocument>('data')
@@ -80,7 +92,7 @@ export class DataService {
       const result = await collection.insertMany(documents, { ordered: false })
 
       await this.publishEvent(EventType.DATA_UPLOAD_COMPLETED, {
-        filePath,
+        filename,
         insertedCount: result.insertedCount,
       })
 
@@ -89,7 +101,7 @@ export class DataService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to upload file: ${errorMessage}`)
-      await this.publishEvent(EventType.DATA_UPLOAD_FAILED, { filePath, error: errorMessage })
+      await this.publishEvent(EventType.DATA_UPLOAD_FAILED, { filename, error: errorMessage })
       throw error
     }
   }
@@ -99,60 +111,30 @@ export class DataService {
     await this.publishEvent(EventType.DATA_SEARCH_STARTED, { query, page, limit })
 
     try {
-      await this.ensureConnection()
       const collection = this.db.collection<DataDocument>('data')
 
-      await this.ensureIndexes(collection)
+      const searchFilter = await buildDynamicSearchQuery(collection, query)
 
-      let searchFilter: Record<string, unknown> = {}
-      if (query) {
-        const sample = await this.getSampleDocument(collection)
-        const keys = Object.keys(sample).filter(
-          (key) => typeof sample[key] === 'string' || typeof sample[key] === 'number',
-        )
-
-        if (keys.length > 0) {
-          searchFilter = {
-            $or: keys.map((key) => ({
-              [key]: { $regex: String(query), $options: 'i' },
-            })),
-          }
-        }
-      }
+      const { params, query: paginationQuery } = preparePagination(page, limit)
 
       const total = await collection.countDocuments(searchFilter)
-      const skip = (page - 1) * limit
 
-      const data = await collection.find(searchFilter).skip(skip).limit(limit).toArray()
+      const data = await collection.find(searchFilter).skip(paginationQuery.skip).limit(paginationQuery.limit).toArray()
 
       await this.publishEvent(EventType.DATA_SEARCH_COMPLETED, {
         query,
-        page,
-        limit,
+        page: params.page,
+        limit: params.limit,
         total,
         found: data.length,
       })
 
-      return { data, total, page, limit }
+      return formatPaginatedResponse(data, total, params)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       await this.publishEvent(EventType.DATA_SEARCH_FAILED, { query, page, limit, error: errorMessage })
       throw error
     }
-  }
-
-  private async ensureConnection(): Promise<void> {
-    try {
-      await this.db.admin().ping()
-    } catch (error) {
-      this.logger.error(`MongoDB connection check failed: ${error.message}`)
-      throw new Error(`MongoDB is not connected: ${error.message}`)
-    }
-  }
-
-  private async getSampleDocument(collection: Collection<DataDocument>): Promise<DataDocument> {
-    const sample = await collection.findOne({})
-    return (sample || {}) as DataDocument
   }
 
   private async ensureIndexes(collection: Collection<DataDocument>): Promise<void> {

@@ -5,13 +5,14 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/data-pipeline/package.json apps/data-pipeline/package.json
 COPY shared/package.json shared/package.json
+COPY shared/tsconfig.json shared/tsconfig.json
 
-RUN pnpm install --frozen-lockfile --filter data-pipeline... --filter @my-apps/shared...
+RUN pnpm install --frozen-lockfile
 
 COPY apps/data-pipeline ./apps/data-pipeline
-COPY shared ./shared
-RUN pnpm --filter @my-apps/shared... build
-RUN pnpm --filter data-pipeline... build
+COPY shared/src ./shared/src
+RUN pnpm --filter @my-apps/shared build
+RUN pnpm --filter data-pipeline build
 
 FROM node:24-alpine AS runner
 WORKDIR /app

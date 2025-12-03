@@ -5,5 +5,8 @@ import { IsString } from 'class-validator'
  */
 export class UploadFileDto {
   @IsString()
-  filePath!: string
+  filename!: string
+
+  @IsString()
+  content!: string
 }

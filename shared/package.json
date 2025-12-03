@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -b tsconfig.json --force"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",
@@ -17,4 +17,3 @@
     "mongodb": "^6.3.0"
   }
 }
-

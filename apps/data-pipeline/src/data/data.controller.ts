@@ -17,8 +17,8 @@ export class DataController {
 
   @MessagePattern(MessageType.DATA_UPLOAD)
   async uploadFile(@Payload() payload: UploadFileDto) {
-    this.logger.log(`Received upload request for: ${JSON.stringify(payload, null, 2)}`)
-    return await this.dataService.uploadAndParseFile(payload.filePath)
+    this.logger.log(`Received upload request for file: ${payload.filename}`)
+    return await this.dataService.uploadAndParseFile(payload.filename, payload.content)
   }
 
   @MessagePattern(MessageType.DATA_SEARCH)

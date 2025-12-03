@@ -1,136 +1,89 @@
-# Microservices Architecture
+# Microservices Case
 
-The project is a microservices architecture based on NestJS, consisting of three main services:
+NestJS-based microservices architecture for data processing with event journaling. Consists of three services communicating via Redis and using MongoDB for storage.
 
-- **Gateway** (API Gateway) - main API gateway for client interactions
-- **Journal** - event logging and journaling service
-- **Data Pipeline** - data processing and loading service
+## Architecture
 
-Services communicate through Redis (microservices transport) and use MongoDB for data storage.
+**Gateway** — API Gateway with Swagger documentation
+**Journal** — event journaling service with PDF report generation
+**Data Pipeline** — external API data fetching, file upload parsing, and data search
+
+Services communicate through Redis microservices transport, data is stored in MongoDB.
 
 ## Project Structure
 
 ```
 .
 ├── apps/
-│   ├── gateway/          # API Gateway service
-│   ├── journal/          # Journaling service
-│   └── data-pipeline/    # Data processing service
-├── shared/               # Shared modules and utilities
-├── docker-compose.yml    # Docker Compose configuration
-├── .env.example          # Environment variables template
-└── package.json          # Root package.json
+│   ├── gateway/         # API Gateway with Swagger
+│   ├── journal/         # Journaling + PDF generation
+│   └── data-pipeline/   # Data fetching, file upload, data search
+├── shared/              # Shared types and modules
+├── docker-compose.yml
+└── .env.example
 ```
 
-## Dependencies
+## Tech Stack
 
-### System Requirements
-
-- **Node.js** version 24 or higher
-- **pnpm** version 8 or higher (installed automatically via corepack)
-- **Docker** and **Docker Compose** (for containerized deployment)
-- **MongoDB** version 7 (if running locally without Docker)
-- **Redis** (if running locally without Docker)
-
-### Technology Stack
-
-- **NestJS** 10.4.20 - Node.js framework
-- **TypeScript** 5.9.3 - programming language
-- **MongoDB** 6.3.0 - database
-- **Redis** (ioredis 5.5.0) - cache and microservices transport
-- **Express** 4.18.2 - web server
+- **NestJS 10.4.20** - Node.js framework
+- **ypeScript 5.9.3** - programming language
+- **MongoDB 6.3.0** - database
+- **Redis (ioredis 5.5.0)** - cache and microservices transport
+- **Express 4.18.2** - web server
 - **Swagger** - API documentation (available in Gateway)
 
-### Installing Dependencies
+## Implementation Details
+
+- **Monorepo with pnpm workspaces** — shared module with common types and utilities
+- **Redis microservices transport** — async service communication via request-response pattern
+
+## Requirements
+
+- Node.js version 24 or higher
+- pnpm version 8 or higher (installed automatically via corepack)
+- Docker and Docker Compose (for containerized deployment)
+- Cairo, Pango, Jpeg, Giflib, Pixman (for local development(Journal service))
+
+**For local development (Journal service):**
+On macOS:
 
 ```bash
-# Install all project dependencies
-pnpm install
+brew install cairo pango jpeg giflib pixman
 ```
 
-## Environment Variables
+## Quick Start
 
-Copy the `.env.example` file to `.env` in the project root:
+### Run with Docker Compose (recommended)
 
 ```bash
+# Copy environment variables
 cp .env.example .env
-```
 
-The `.env.example` file contains the following variables:
-
-```env
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=secret
-
-# MongoDB
-MONGODB_HOST=localhost
-MONGODB_PORT=27017
-MONGODB_USER=admin
-MONGODB_PASSWORD=secret
-
-# API Gateway
-API_GATEWAY_PORT=4050
-API_GATEWAY_PROTOCOL=http
-
-# Environment
-NODE_ENV=development
-```
-
-**Note:** When running via Docker Compose, the `REDIS_HOST` and `MONGODB_HOST` variables are automatically overridden with service names (`redis` and `mongodb`).
-
-## Running with Docker Compose
-
-The easiest way to run all services is using Docker Compose.
-
-### Prerequisites
-
-- Docker and Docker Compose installed
-- Copy `.env.example` to `.env` in the project root (optional, default values will be used if not provided)
-
-### Starting All Services
-
-```bash
-# Start all services in background mode
+# Start all services
 docker-compose up -d
-
-# Start with log output
-docker-compose up
-
-# Rebuild images before starting
-docker-compose up --build
 ```
 
-### Stopping Services
+Services will be available at:
+
+- API: http://localhost:4050
+- Swagger: http://localhost:4050/swagger
+
+### Local Development Setup
 
 ```bash
-# Stop all services
-docker-compose down
+# 1. Start infrastructure
+docker-compose up -d mongodb redis
 
-# Stop and remove volumes (will delete database data)
-docker-compose down -v
-```
+# 2. Install dependencies
+pnpm install
 
-### Viewing Logs
+# 3. Build shared module
+pnpm build:shared
 
-```bash
-# Logs from all services
-docker-compose logs -f
-
-# Logs from a specific service
-docker-compose logs -f gateway
-docker-compose logs -f journal
-docker-compose logs -f data-pipeline
-docker-compose logs -f mongodb
-docker-compose logs -f redis
-```
-
-### Checking Status
-
-```bash
-# Status of all containers
-docker-compose ps
+# 4. Start services (in separate terminals)
+pnpm dev:journal
+pnpm dev:data-pipeline
+pnpm dev:gateway
 ```
 
 ### Service Ports
@@ -144,151 +97,46 @@ After starting, services will be available on the following ports:
 - **MongoDB**: localhost:27017
 - **Redis**: localhost:6379
 
-## Local Service Startup
-
-For development, you can run services locally without Docker.
-
-### Prerequisites
-
-1. Ensure MongoDB and Redis are running locally or in Docker:
+## Commands
 
 ```bash
-# Start only infrastructure (MongoDB and Redis)
-docker-compose up -d mongodb redis
+# Build
+pnpm build              # Build everything
+pnpm build:shared       # Shared module only
+
+# Development
+pnpm dev:gateway        # Gateway in dev mode
+pnpm dev:journal        # Journal in dev mode
+pnpm dev:data-pipeline  # Data Pipeline in dev mode
+
+# Linting
+pnpm lint               # ESLint with autofix
+pnpm format             # Prettier formatting
+
+# Docker
+docker-compose up -d    # Start in background
+docker-compose logs -f  # View all logs
+docker-compose down -v  # Stop + remove volumes
 ```
 
-2. Copy `.env.example` to `.env` in the project root (see "Environment Variables" section)
+## Environment Variables
 
-3. Install dependencies:
+See `.env.example` for the complete list. Main variables:
 
-```bash
-pnpm install
+```env
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=secret
+
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_USER=admin
+MONGODB_PASSWORD=secret
+
+API_GATEWAY_PORT=4050
+API_GATEWAY_PROTOCOL=http
+
+NODE_ENV=development
 ```
 
-### Building Shared Module
-
-Before starting any service, you need to build the shared module:
-
-```bash
-pnpm build:shared
-```
-
-### Starting Individual Services
-
-#### Gateway
-
-```bash
-# Development mode with hot-reload
-pnpm dev:gateway
-
-# Or manually
-pnpm build:shared
-pnpm --filter gateway start:dev
-```
-
-Service will be available at http://localhost:4050
-Swagger documentation: http://localhost:4050/swagger
-
-#### Journal
-
-```bash
-# Development mode with hot-reload
-pnpm dev:journal
-
-# Or manually
-pnpm build:shared
-pnpm --filter journal start:dev
-```
-
-#### Data Pipeline
-
-```bash
-# Development mode with hot-reload
-pnpm dev:data-pipeline
-
-# Or manually
-pnpm build:shared
-pnpm --filter data-pipeline start:dev
-```
-
-### Building All Services
-
-```bash
-# Build shared module and all services
-pnpm build
-```
-
-### Running in Production Mode
-
-After building, you can run services in production mode:
-
-```bash
-# Gateway
-cd apps/gateway
-node dist/main.js
-
-# Journal
-cd apps/journal
-node dist/main.js
-
-# Data Pipeline
-cd apps/data-pipeline
-node dist/main.js
-```
-
-## Useful Commands
-
-### Linting and Formatting
-
-```bash
-# Code linting
-pnpm lint
-
-# Code formatting
-pnpm format
-```
-
-### Cleanup
-
-```bash
-# Remove all built files
-find . -name "dist" -type d -exec rm -rf {} +
-find . -name "*.tsbuildinfo" -type f -delete
-```
-
-## Troubleshooting
-
-### MongoDB Connection Issues
-
-- Ensure MongoDB is running and accessible
-- Check credentials in `.env` file (copy from `.env.example` if needed)
-- Verify that port 27017 is not occupied by another process
-
-### Redis Connection Issues
-
-- Ensure Redis is running and accessible
-- Check password in `.env` file (copy from `.env.example` if needed)
-- Verify that port 6379 is not occupied by another process
-
-### Port Issues
-
-If ports are occupied, change them in the `.env` file (copy from `.env.example` if needed) or `docker-compose.yml`
-
-### Dependency Issues
-
-```bash
-# Clean and reinstall dependencies
-rm -rf node_modules apps/*/node_modules shared/node_modules
-pnpm install
-```
-
-## Service Startup Order
-
-When starting locally, the following order is recommended:
-
-1. **MongoDB** and **Redis** (infrastructure)
-2. **Journal** (microservice)
-3. **Data Pipeline** (microservice)
-4. **Gateway** (API Gateway, depends on other services)
-
-When using Docker Compose, the startup order is controlled via `depends_on` in `docker-compose.yml`.
+When running via Docker Compose, hosts are automatically changed to service names (`redis`, `mongodb`).

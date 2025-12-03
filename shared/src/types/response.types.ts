@@ -1,3 +1,6 @@
+import { LogEntry } from './document.types'
+import { PaginationMeta } from './pagination.types'
+
 /**
  * Response for fetch data operation.
  */
@@ -18,21 +21,15 @@ export interface UploadFileResponse {
  */
 export interface SearchDataResponse {
   data: Record<string, unknown>[]
-  total: number
-  page: number
-  limit: number
+  meta: PaginationMeta
 }
-
-import { LogEntry } from './document.types'
 
 /**
  * Response for get logs operation.
  */
 export interface GetLogsResponse {
-  logs: LogEntry[]
-  total: number
-  page: number
-  limit: number
+  data: LogEntry[]
+  meta: PaginationMeta
 }
 
 /**
