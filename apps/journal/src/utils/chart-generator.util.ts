@@ -1,5 +1,6 @@
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas'
 import { ChartConfiguration } from 'chart.js'
+import { CHART_CONSTANTS } from '../constants'
 
 export interface ChartData {
   labels: string[]
@@ -7,17 +8,11 @@ export interface ChartData {
 }
 
 export class ChartGeneratorUtil {
-  private static readonly width = 800
-  private static readonly height = 400
-
-  /**
-   * Generates a line chart for data
-   */
   static async generateLineChart(data: ChartData, title: string): Promise<Buffer> {
     const chartJSNodeCanvas = new ChartJSNodeCanvas({
-      width: this.width,
-      height: this.height,
-      backgroundColour: 'white',
+      width: CHART_CONSTANTS.dimensions.width,
+      height: CHART_CONSTANTS.dimensions.height,
+      backgroundColour: CHART_CONSTANTS.colors.background,
     })
 
     const configuration: ChartConfiguration = {
@@ -28,9 +23,9 @@ export class ChartGeneratorUtil {
           {
             label: title,
             data: data.values,
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1,
+            borderColor: CHART_CONSTANTS.colors.line,
+            backgroundColor: CHART_CONSTANTS.colors.lineBackground,
+            tension: CHART_CONSTANTS.styles.lineTension,
             fill: true,
           },
         ],
@@ -42,15 +37,15 @@ export class ChartGeneratorUtil {
             display: true,
             text: title,
             font: {
-              size: 16,
+              size: CHART_CONSTANTS.styles.titleFontSize,
             },
           },
         },
         scales: {
           y: {
-            beginAtZero: true,
+            beginAtZero: CHART_CONSTANTS.axis.yAxisBeginAtZero,
             ticks: {
-              precision: 0,
+              precision: CHART_CONSTANTS.axis.yAxisTicksPrecision,
             },
           },
         },
