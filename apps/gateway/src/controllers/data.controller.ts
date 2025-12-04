@@ -21,7 +21,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger'
 import { ClientProxy } from '@nestjs/microservices'
-import { MessageType } from '@my-apps/shared'
+import { MessageType, isWildcardError } from '@my-apps/shared'
 import {
   FetchDataSwaggerDto,
   SearchQuerySwaggerDto,
@@ -136,8 +136,8 @@ export class DataController {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to search data: ${errorMessage}`)
-      if (errorMessage.includes('Wildcard')) {
-        throw new BadRequestException(errorMessage)
+      if (isWildcardError(error)) {
+        throw new BadRequestException(error.message)
       }
 
       throw new HttpException('Failed to search data', HttpStatus.INTERNAL_SERVER_ERROR)

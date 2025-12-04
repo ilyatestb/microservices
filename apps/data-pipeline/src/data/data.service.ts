@@ -6,7 +6,7 @@ import Redis from 'ioredis'
 import axios from 'axios'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { formatPaginatedResponse, MONGODB_DB, preparePagination } from '@my-apps/shared'
+import { formatPaginatedResponse, isWildcardError, MONGODB_DB, preparePagination } from '@my-apps/shared'
 import { REDIS_CLIENT } from '@my-apps/shared'
 import {
   FetchDataResponse,
@@ -21,6 +21,7 @@ import {
   PubSubChannel,
   buildDynamicSearchQuery,
 } from '@my-apps/shared'
+import { RpcException } from '@nestjs/microservices'
 
 @Injectable()
 export class DataService implements OnModuleInit {
@@ -133,6 +134,12 @@ export class DataService implements OnModuleInit {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       await this.publishEvent(EventType.DATA_SEARCH_FAILED, { query, page, limit, error: errorMessage })
+      if (isWildcardError(error)) {
+        throw new RpcException({
+          statusCode: 400,
+          message: error.message,
+        })
+      }
       throw error
     }
   }
