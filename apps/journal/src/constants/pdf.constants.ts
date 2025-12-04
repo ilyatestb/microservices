@@ -25,8 +25,10 @@ export const PDF_CONSTANTS = {
     width: 500,
   },
   timeAggregation: {
-    dayInMs: 1000 * 60 * 60 * 24,
-    hourlyThresholdDays: 2,
+    minuteInMs: 1000 * 60,
+    hourInMs: 1000 * 60 * 60,
+    dailyThresholdHours: 48,
+    hourlyThresholdMinutes: 60,
     datePadLength: 2,
     datePadChar: '0',
     monthOffset: 1,
