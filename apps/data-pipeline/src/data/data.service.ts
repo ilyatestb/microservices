@@ -164,22 +164,26 @@ export class DataService implements OnModuleInit {
       }
 
       await this.redis.publish(PubSubChannel.EVENTS, JSON.stringify(event))
-
-      const timeSeriesKey = `events:${eventType}`
-      try {
-        await this.redis.call('TS.ADD', timeSeriesKey, '*', '1', 'RETENTION', '86400000')
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        if (errorMessage?.includes('key does not exist')) {
-          await this.redis.call('TS.CREATE', timeSeriesKey, 'RETENTION', '86400000')
-          await this.redis.call('TS.ADD', timeSeriesKey, '*', '1')
-        } else {
-          throw error
-        }
-      }
+      await this.addEventToTimeSeries(eventType)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.logger.error(`Failed to publish event: ${errorMessage}`)
+    }
+  }
+
+  private async addEventToTimeSeries(eventType: EventType | string): Promise<void> {
+    const timeSeriesKey = `events:${eventType}`
+
+    try {
+      await this.redis.call('TS.ADD', timeSeriesKey, '*', '1', 'RETENTION', '86400000')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage?.includes('key does not exist')) {
+        await this.redis.call('TS.CREATE', timeSeriesKey, 'RETENTION', '86400000')
+        await this.redis.call('TS.ADD', timeSeriesKey, '*', '1')
+      } else {
+        throw error
+      }
     }
   }
 }
